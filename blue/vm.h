@@ -13,8 +13,8 @@
 // single ongoing function call, the current would be at the top
 typedef struct
 {
-    // current function being called
-    ObjFunction *function;
+    // current closure being called
+    ObjClosure *closure;
 
     // jump back to before the function call started
     uint8_t *ip;

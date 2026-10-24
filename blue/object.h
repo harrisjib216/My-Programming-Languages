@@ -7,10 +7,12 @@
 
 #define OBJ_TYPE(item) (AS_OBJ(item)->type)
 
+#define IS_CLOSURE(item) isObjType(item, OBJ_CLOSURE);
 #define IS_FUNCTION(item) isObjType(item, OBJ_FUNCTION)
 #define IS_NATIVE(item) isObjType(item, OBJ_NATIVE);
 #define IS_STRING(item) isObjType(item, OBJ_STRING)
 
+#define AS_CLOSURE(item) ((ObjClosure *)AS_OBJ(item))
 #define AS_FUNCTION(item) ((ObjFunction *)AS_OBJ(item))
 #define AS_NATIVE(item) \
     (((ObjNative *)AS_OBJ(item))->function)
@@ -20,6 +22,7 @@
 // types of objects for blue
 typedef enum
 {
+    OBJ_CLOSURE,
     OBJ_FUNCTION,
     OBJ_NATIVE,
     OBJ_STRING,
@@ -66,7 +69,16 @@ struct ObjString
     uint32_t hash;
 };
 
-// c function to declare byte code function
+// captures surrounding varibles and the inner function
+typedef struct {
+    Obj obj;
+    ObjFunction *function;
+} ObjClosure;
+
+// a C function to make Blue closures
+ObjClosure *newClosure(ObjFunction *function);
+
+// a C function to make Blue functions
 ObjFunction *newFunction();
 
 // native C functions, callable in Blue

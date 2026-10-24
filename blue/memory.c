@@ -1,6 +1,7 @@
 #include <stdlib.h>
 
 #include "memory.h"
+#include "object.h"
 #include "vm.h"
 
 // return reallocated heap space
@@ -28,6 +29,11 @@ static void freeObject(Obj *object)
 {
     switch (object->type)
     {
+    case OBJ_CLOSURE:
+    {
+        FREE(ObjClosure, object);
+        break;
+    }
     case OBJ_FUNCTION:
     {
         ObjFunction *function = (ObjFunction *)object;

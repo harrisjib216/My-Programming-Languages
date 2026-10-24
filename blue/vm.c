@@ -4,12 +4,14 @@
 #include <string.h>
 #include <time.h>
 
+#include "chunk.h"
 #include "common.h"
 #include "compiler.h"
 #include "debug.h"
 #include "object.h"
 #include "math.h"
 #include "memory.h"
+#include "value.h"
 #include "vm.h"
 
 VM vm;
@@ -155,11 +157,11 @@ static Value peek(int distance)
 }
 
 // just "called" a function in the interpreter, so grow the stack
-static bool call(ObjFunction *function, int argCount)
+static bool call(ObjClosure *closure, int argCount)
 {
-    if (argCount != function->arity)
+    if (argCount != closure->function->arity)
     {
-        runtimeError("Expected %d arguments but go %d.", function->arity, argCount);
+        runtimeError("Expected %d arguments but go %d.", closure->function->arity, argCount);
         return false;
     }
 
@@ -170,8 +172,8 @@ static bool call(ObjFunction *function, int argCount)
     }
 
     CallFrame *frame = &vm.frames[vm.frameCount++];
-    frame->function = function;
-    frame->ip = function->chunk.code;
+    frame->closure = closure;
+    frame->ip = closure->function->chunk.code;
     frame->slots = vm.stackTop - argCount - 1;
     return true;
 }
@@ -183,8 +185,8 @@ static bool callValue(Value callee, int argCount)
     {
         switch (OBJ_TYPE(callee))
         {
-        case OBJ_FUNCTION:
-            return call(AS_FUNCTION(callee), argCount);
+        case OBJ_CLOSURE:
+            return call(AS_CLOSURE(callee), argCount);
         case OBJ_NATIVE:
         {
             NativeFunc native = AS_NATIVE(callee);
@@ -246,7 +248,7 @@ static InterpretResult run()
 
 // get literal value
 #define READ_CONSTANT() \
-    (frame->function->chunk.constants.values[READ_BYTE()])
+    (frame->closure->function->chunk.constants.values[READ_BYTE()])
 
 // get string value
 #define READ_STRING() AS_STRING(READ_CONSTANT())
@@ -282,8 +284,8 @@ static InterpretResult run()
 
         // print instruction with data
         disassembleInstruction(
-            &frame->function->chunk,
-            (int)(frame->ip - frame->function->chunk.code));
+            &frame->closure->function->chunk,
+            (int)(frame->ip - frame->closure->function->chunk.code));
 #endif
 
         uint8_t instruction;
@@ -491,6 +493,13 @@ static InterpretResult run()
             {
                 return INTERPRET_RUNTIME_ERROR;
             }
+            break;
+        }
+        case OP_CLOSURE:
+        {
+            ObjFunction *function = AS_FUNCTION(READ_CONSTANT());
+            ObjClosure *closure = newClosure(function);
+            push(OBJ_VAL(closure));
             break;
         }
         // eof, program, function
